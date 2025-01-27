@@ -7,21 +7,27 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
+@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity(name = "categories")
-public class Category {
+public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank
-    @Size(min = 5, message = "Category name must contain atleast 5 characters")
+    @Size(min = 3, message = "Product name must contain atleast 3 characters")
     private String name;
+    private String image;
 
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
-    private List<Product> products;
+    @NotBlank
+    @Size(min = 6, message = "Product description must contain atleast 6 characters")
+    private String description;
+    private Integer quantity;
+    private double price;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
 }
