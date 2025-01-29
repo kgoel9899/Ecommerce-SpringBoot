@@ -20,4 +20,8 @@ public class Role {
     @Enumerated(EnumType.STRING) // enum will be persisted as string in the DB (default is integer)
     @Column(length = 20)
     private AppRole roleName;
+
+    public Role(AppRole roleName) {
+        this.roleName = roleName;
+    }
 }
