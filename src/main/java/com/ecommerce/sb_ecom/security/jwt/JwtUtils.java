@@ -1,14 +1,18 @@
 package com.ecommerce.sb_ecom.security.jwt;
 
+import com.ecommerce.sb_ecom.security.services.UserDetailsImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.WebUtils;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
@@ -23,6 +27,39 @@ public class JwtUtils {
 
     @Value("${spring.app.jwtExpirationMs}")
     private int jwtExpirationMs;
+
+    @Value("${spring.ecom.app.jwtCookieName}")
+    private String jwtCookie;
+
+    ////////////  COOKIE CODE //////////////
+
+    public String getJwtFromCookies(HttpServletRequest request) {
+        Cookie cookie = WebUtils.getCookie(request, jwtCookie);
+        if (cookie != null) {
+            return cookie.getValue(); // get the jwt token
+        } else {
+            return null;
+        }
+    }
+
+    public ResponseCookie generateJwtCookie(UserDetailsImpl userPrincipal) {
+        String jwt = generateTokenFromUsername(userPrincipal);
+        return ResponseCookie.from(jwtCookie, jwt)
+                .path("/api")
+                .maxAge(24 * 60 * 60)
+                .httpOnly(false)
+                .build();
+    }
+
+    // to invalidate the session
+    public ResponseCookie getCleanJwtCookie() {
+        ResponseCookie cookie = ResponseCookie.from(jwtCookie, null)
+                .path("/api")
+                .build();
+        return cookie;
+    }
+
+    ////////////  COOKIE CODE //////////////
 
     public String getJwtFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
