@@ -6,10 +6,6 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Data
@@ -45,7 +41,7 @@ public class Address {
     @Size(min = 6, message = "City name must be atleast 6 characters")
     private String pincode;
 
-    @ManyToMany(mappedBy = "addresses")
-    @ToString.Exclude
-    private List<User> users = new ArrayList<>();
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 }
