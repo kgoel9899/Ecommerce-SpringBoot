@@ -3,6 +3,7 @@ package com.ecommerce.sb_ecom.service;
 import com.ecommerce.sb_ecom.exception.APIException;
 import com.ecommerce.sb_ecom.exception.ResourceNotFoundException;
 import com.ecommerce.sb_ecom.model.Cart;
+import com.ecommerce.sb_ecom.model.CartItem;
 import com.ecommerce.sb_ecom.model.Category;
 import com.ecommerce.sb_ecom.model.Product;
 import com.ecommerce.sb_ecom.payload.ProductDTO;
@@ -181,21 +182,21 @@ public class ProductServiceImpl implements ProductService {
 //        When you delete the Product, JPA cascades the delete operation to the associated CartItem entities without any conflicts, as there are no detached or transient entities in the persistence context.
 
         List<Cart> carts = cartRepository.findCartsByProductId(productId);
-        carts.forEach(cart -> cartService.deleteProductFromCart(cart.getId(), productId));
+        // TODO below line is commented due to the TODO in CartServiceImpl deleteProductFromCart
+//        carts.forEach(cart -> cartService.deleteProductFromCart(cart.getId(), productId));
 
 //        To fix this issue, you need to ensure that the CartItem entities are properly removed from the Cart entities and the persistence context is updated accordingly. Here's how you can modify your code:
 //        Why This Works:
 //        By explicitly removing the CartItem from the Cart's cartItems collection and deleting it from the database, you ensure that the CartItem is no longer referenced by any managed entity.
 //        When you delete the Product, JPA does not attempt to cascade the delete operation to the CartItem entities, as they have already been removed and are no longer part of the persistence context.
-//        for (Cart cart : carts) {
-//            CartItem cartItem = cartItemRepository.findCartItemByProductIdAndCartId(cart.getId(), productId);
-//            if (cartItem != null) {
-//                cart.setTotalPrice(cart.getTotalPrice() - (cartItem.getPrice() * cartItem.getQuantity()));
-//                cart.getCartItems().remove(cartItem);
-//                cartItemRepository.delete(cartItem);
-//                cartRepository.save(cart);
-//            }
-//        }
+        for (Cart cart : carts) {
+            CartItem cartItem = cartItemRepository.findCartItemByProductIdAndCartId(cart.getId(), productId);
+            if (cartItem != null) {
+                cart.setTotalPrice(cart.getTotalPrice() - (cartItem.getPrice() * cartItem.getQuantity()));
+                cart.getCartItems().remove(cartItem);
+                cartRepository.save(cart);
+            }
+        }
 
         Product productFromDb = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));

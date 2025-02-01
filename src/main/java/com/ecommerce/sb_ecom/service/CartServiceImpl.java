@@ -208,11 +208,15 @@ public class CartServiceImpl implements CartService {
         cart.setTotalPrice(cart.getTotalPrice() -
                 (cartItem.getPrice() * cartItem.getQuantity()));
 
+        // TODO - figure out why (to replicate the issue, pull the commit before this one and run "delete product from cart api"
+        // otherwise for "delete product api" works with the below 2 lines and corresponding commented out (changed) code in ProductServiceImpl
+        // had to separate the "delete product api" and "delete product from cart api"
+        // "delete product from cart api" with the below commented out code was not removing the cartItem from the DB
         // Remove the cart item from the cart's cartItems collection, will automatically delete from DB too due to orphanRemoval = true
-        cart.getCartItems().remove(cartItem);
-        cartRepository.save(cart);
+//        cart.getCartItems().remove(cartItem);
+//        cartRepository.save(cart);
 
-//        cartItemRepository.deleteCartItemByProductIdAndCartId(cartId, productId);
+        cartItemRepository.deleteCartItemByProductIdAndCartId(cartId, productId);
 
         return "Product " + cartItem.getProduct().getName() + " removed from the cart !!!";
     }
