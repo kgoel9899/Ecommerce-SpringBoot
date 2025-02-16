@@ -94,7 +94,11 @@ public class OrderServiceImpl implements OrderService {
             product.setQuantity(product.getQuantity() - quantity);
 
             productRepository.save(product);
-            cartService.deleteProductFromCart(cart.getId(), item.getProduct().getId());
+        }
+
+        // moved it out, because deleting in the above for loop was causing the iterator to get invalidated
+        while(!cartItems.isEmpty()) {
+            cartService.deleteProductFromCart(cart.getId(), cartItems.get(0).getProduct().getId());
         }
 
         OrderDTO orderDTO = modelMapper.map(savedOrder, OrderDTO.class);
