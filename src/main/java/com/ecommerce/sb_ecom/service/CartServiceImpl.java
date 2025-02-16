@@ -193,32 +193,65 @@ public class CartServiceImpl implements CartService {
         return cartDTO;
     }
 
+    // Your custom query likely joins Cart with CartItem and ensures Hibernate recognizes the relationship.
+    // findAll() might be returning detached or uninitialized entities, causing cart.getCartItems().remove(cartItem); to not work as expected.
+
+    // 1. By default, in JPA, collections (@OneToMany) are lazily loaded unless explicitly specified otherwise.
+    //
+    //How It Affects findAll()
+    //When you call findAll(), it only retrieves Cart entities and does not load their cartItems unless you explicitly fetch them.
+    //When you later call cart.getCartItems().remove(cartItem);, Hibernate might not detect this change, and the removal might not be persisted to the database.
+    // so to ensure that cartItems are also fetched, added EAGER fetch type to the OneToMany mapping .... niceeee!
+
+
+    // 2. findCartsByProductId(productId) Works Because It Likely Joins cartItems
+    //Your custom JPQL method findCartsByProductId(productId) probably fetches carts that contain the product along with their cartItems, ensuring Hibernate recognizes the relationships and tracks changes correctly.
+    //
+    //Why It Works:
+    //It might be using an inner join that ensures only relevant carts are retrieved with their cartItems already initialized.
+
+    // i wrote a custom query method 'findByIdd' to check the behaviour -- it got deleted
+    // below is why --
+    // JPQL (findByIdd(cartId)) works because it always runs a fresh query, returning a fully managed entity.
+    // findById(cartId) fails because it may return a detached entity or not fully initialize cartItems.
+
+    // findById(cartId) Returns a Proxy That Might Not Be Fully Managed
+    //findById(cartId) loads the entity lazily if it's already in the Persistence Context.
+    //If Hibernate detects that the Cart was already loaded in an earlier session, it may return a detached entity,
+    // meaning changes to cartItems won’t be tracked.
+
+    // findById() is not working even with EAGER fetchType --
+    // it means that cartItems is not properly initialized when using findById(cartId).
+    // This strongly suggests that Hibernate is returning a proxy or detached entity, even with EAGER fetch.
+
     @Transactional
     @Override
     public String deleteProductFromCart(Long cartId, Long productId) {
         Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "id", cartId));
-
         CartItem cartItem = cartItemRepository.findCartItemByProductIdAndCartId(cartId, productId);
-
         if (cartItem == null) {
             throw new ResourceNotFoundException("Product", "id", productId);
         }
-
+//        String productName = cartItem.getProduct().getName();
         cart.setTotalPrice(cart.getTotalPrice() -
                 (cartItem.getPrice() * cartItem.getQuantity()));
 
-        // TODO - figure out why (to replicate the issue, pull the commit before this one and run "delete product from cart api"
-        // otherwise for "delete product api" works with the below 2 lines and corresponding commented out (changed) code in ProductServiceImpl
-        // had to separate the "delete product api" and "delete product from cart api"
-        // "delete product from cart api" with the below commented out code was not removing the cartItem from the DB
-        // Remove the cart item from the cart's cartItems collection, will automatically delete from DB too due to orphanRemoval = true
-//        cart.getCartItems().remove(cartItem);
-//        cartRepository.save(cart);
+        cart.getCartItems().remove(cartItem);
+        cartRepository.save(cart);
 
-        cartItemRepository.deleteCartItemByProductIdAndCartId(cartId, productId);
+        // this code alone also works because of the comments above -- tells hibernate about the relationships due to the JOIN FETCH
+        // cartItemRepository.deleteCartItemByProductIdAndCartId(cartId, productId);
 
-        return "Product " + cartItem.getProduct().getName() + " removed from the cart !!!";
+
+        // cartItem.getProduct().getName() accesses cartItem.getProduct(), which is a related entity.
+        //If Product is lazy-loaded, Hibernate tries to fetch it from the database.
+        //But if the transaction is already closing or if cartItem was removed, Hibernate may not allow the lazy loading.
+        // hence that is why this return does not delete the cartItem
+        // load the product before deleting cartItem --- EVEN THIS IS NOT DELETING THE CARTITEM
+//        return "Product " + cartItem.getProduct().getName() + " removed from the cart !!!";
+
+        return "Product removed from the cart !!!";
     }
 
     @Override
